@@ -47,10 +47,20 @@ final class EntryPoint {
         EntryPoint.packageName = packageName;
         EntryPoint.properties = Utils.toMap(props);
 
-        File libFolder = new File(moduleDir, "lib");
-        if (libFolder.isDirectory()) {
-            Utils.addNativePath((BaseDexClassLoader) EntryPoint.class.getClassLoader(),
-                    new File(libFolder, Utils.getNativeLibraryFolderName()));
+        libs:
+        {
+            String attachNativeLibs = properties.get("attachNativeLibs");
+            if (attachNativeLibs == null) {
+                Log.e(TAG, "Entrypoint not found");
+                break libs;
+            }
+            if (Boolean.parseBoolean(attachNativeLibs)) {
+                File libFolder = new File(moduleDir, "lib");
+                if (libFolder.isDirectory()) {
+                    Utils.addNativePath((BaseDexClassLoader) EntryPoint.class.getClassLoader(),
+                            new File(libFolder, Utils.getNativeLibraryFolderName()));
+                }
+            }
         }
 
         String entrypointName = properties.get("entrypoint");

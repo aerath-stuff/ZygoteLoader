@@ -61,6 +61,7 @@ public final class ZygoteLoaderDecorator {
         putProperty(moduleProps, "description", true, extension.getDescription());
         putProperty(moduleProps, "entrypoint", true, extension.getEntrypoint());
         putProperty(moduleProps, "updateJson", false, extension.getUpdateJson());
+        putProperty(moduleProps, "attachNativeLibs", false, Boolean.toString(extension.isAttachNativeLibs()));
 
         moduleProps.putAll(extension.getAdditionalProperties());
 
