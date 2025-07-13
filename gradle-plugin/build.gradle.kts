@@ -32,7 +32,7 @@ sourceSets {
     }
 }
 
-task("generateDynamicSources") {
+tasks.register("generateDynamicSources") {
     outputs.dir(dynamicSources)
 
     tasks.withType(JavaCompile::class.java).forEach { it.dependsOn(this) }
