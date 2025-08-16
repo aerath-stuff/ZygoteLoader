@@ -10,7 +10,6 @@ import org.gradle.api.Project;
 
 import javax.annotation.Nonnull;
 
-@SuppressWarnings("UnstableApiUsage")
 public class ZygoteLoaderPlugin implements Plugin<Project> {
     @Override
     public void apply(@Nonnull Project target) {
@@ -20,7 +19,7 @@ public class ZygoteLoaderPlugin implements Plugin<Project> {
 
         target.getDependencies().add("implementation", BuildConfig.RUNTIME_DEPENDENCY);
 
-        //TODO
+        //TODO: allow multidex modules
         target.getExtensions().getByType(ApplicationExtension.class)
                 .getDefaultConfig().setMultiDexEnabled(false);
 
@@ -43,7 +42,7 @@ public class ZygoteLoaderPlugin implements Plugin<Project> {
 
             ZygoteLoaderDecorator decorator = new ZygoteLoaderDecorator(target);
             components.onVariants(components.selector().all(), variant -> {
-                target.afterEvaluate(prj -> decorator.decorateVariant(variant));
+                target.afterEvaluate(unused -> decorator.decorateVariant(variant));
             });
         });
     }

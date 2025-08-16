@@ -20,9 +20,30 @@ void ZygoteLoaderModule::onLoad(zygisk::Api *_api, JNIEnv *_env) {
     api->setOption(zygisk::DLCLOSE_MODULE_LIBRARY);
 }
 
+constexpr int FIRST_ISOLATED_UID = 99000;
+constexpr int LAST_ISOLATED_UID = 99999;
+constexpr int FIRST_APP_ZYGOTE_ISOLATED_UID = 90000;
+constexpr int LAST_APP_ZYGOTE_ISOLATED_UID = 98999;
+constexpr int PER_USER_RANGE = 100000;
+
 void ZygoteLoaderModule::preAppSpecialize(zygisk::AppSpecializeArgs *args) {
     char *package_name;
-    process_get_package_name(env, args->nice_name, &package_name);
+    process_get_name(env, args->nice_name, &package_name);
+
+    {
+        if (args->is_child_zygote != nullptr && *args->is_child_zygote) {
+            LOGI("skip injecting into %s because it's a child zygote", package_name);
+            return;
+        }
+        int uid = args->uid % PER_USER_RANGE;
+        if ((uid >= FIRST_ISOLATED_UID && uid <= LAST_ISOLATED_UID) ||
+            (uid >= FIRST_APP_ZYGOTE_ISOLATED_UID && uid <= LAST_APP_ZYGOTE_ISOLATED_UID)) {
+            LOGI("skip injecting into %s because it's isolated", package_name);
+            return;
+        }
+    }
+
+    process_fix_package_name(package_name);
 
     RAIIFD module_dir = api->getModuleDir(); // keep alive during preSpecialize
     tryLoadDex(module_dir, package_name);
