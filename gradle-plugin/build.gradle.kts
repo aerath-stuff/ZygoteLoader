@@ -24,7 +24,7 @@ gradlePlugin {
     }
 }
 
-val dynamicSources = layout.buildDirectory.dir("generated/dynamic").get()
+val dynamicSources = layout.buildDirectory.dir("generated/dynamic")
 
 sourceSets {
     named("main") {
@@ -32,14 +32,11 @@ sourceSets {
     }
 }
 
-tasks.register("generateDynamicSources") {
+val generator = tasks.register("generateDynamicSources") {
     outputs.dir(dynamicSources)
 
-    tasks.withType(JavaCompile::class.java).forEach { it.dependsOn(this) }
-    tasks["sourcesJar"].dependsOn(this)
-
     doFirst {
-        val buildConfig = dynamicSources.file(
+        val buildConfig = dynamicSources.get().file(
             "com/v7878/zygisk/gradle/BuildConfig.java"
         ).asFile
 
@@ -58,6 +55,9 @@ tasks.register("generateDynamicSources") {
         )
     }
 }
+
+tasks["compileJava"].dependsOn(generator)
+tasks["sourcesJar"].dependsOn(generator)
 
 publishing {
     publications {
