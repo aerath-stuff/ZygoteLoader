@@ -24,7 +24,7 @@ public abstract class CustomizeTask extends DefaultTask {
         StringBuilder sb = new StringBuilder();
         sb.append(HEADER).append("\n\n");
 
-        getCustomizeFiles().get().forEach(f -> {
+        getCustomizeFiles().get().stream().sorted().forEach(f -> {
             sb.append(String.format("[ -f \"$MODPATH/customize.d/%1$s\" ] || abort \"! Part '%1$s' not found\"", f)).append('\n');
             sb.append(String.format(". \"$MODPATH/customize.d/%1$s\"", f)).append('\n');
         });
