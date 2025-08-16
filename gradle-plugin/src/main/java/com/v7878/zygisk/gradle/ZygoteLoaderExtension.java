@@ -111,7 +111,7 @@ public class ZygoteLoaderExtension implements VariantExtension {
     }
 
     public boolean isAttachNativeLibs() {
-        return attachNativeLibs == null || attachNativeLibs;
+        return attachNativeLibs != null && attachNativeLibs;
     }
 
     public void setAttachNativeLibs(boolean attachNativeLibs) {
