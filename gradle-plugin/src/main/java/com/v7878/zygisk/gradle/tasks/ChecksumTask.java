@@ -1,9 +1,11 @@
 package com.v7878.zygisk.gradle.tasks;
 
+import static com.v7878.zygisk.gradle.Utils.files;
+
 import org.gradle.api.DefaultTask;
-import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
 
@@ -12,7 +14,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
-import java.util.Map;
+import java.util.TreeMap;
 
 public abstract class ChecksumTask extends DefaultTask {
     private static final String HEADER = """
@@ -56,36 +58,33 @@ public abstract class ChecksumTask extends DefaultTask {
         }
     }
 
-    @InputDirectory
-    public abstract DirectoryProperty getRootDirectory();
+    @InputFiles
+    public abstract ConfigurableFileCollection getSourceDirectory();
 
     @OutputFile
     public abstract RegularFileProperty getDestinationFile();
 
     @TaskAction
     public void doAction() throws Exception {
-        Path root = getRootDirectory().getAsFile().get().toPath();
+        var checksums = new TreeMap<String, String>();
+
+        getSourceDirectory().getAsFileTree().visit(files(file -> {
+            var path = file.getPath();
+            if (!path.startsWith("META-INF")) {
+                path = path.replace("\\", "/");
+                checksums.put(path, checksum(file.getFile().toPath()));
+            }
+        }));
 
         StringBuilder sb = new StringBuilder();
         sb.append(HEADER).append("\n\n");
 
-        try (var files = Files.walk(root)) {
-            var checksums = files
-                    .filter(Files::isRegularFile)
-                    .map(p -> root.relativize(p).toString())
-                    .filter(p -> !p.startsWith("META-INF"))
-                    .map(p -> Map.entry(p.replace('\\', '/'),
-                            checksum(root.resolve(p))))
-                    .sorted(Map.Entry.comparingByKey())
-                    .toList();
-
-            for (var checksum : checksums) {
-                sb.append("do_verify ")
-                        .append(checksum.getKey())
-                        .append(" ")
-                        .append(checksum.getValue())
-                        .append('\n');
-            }
+        for (var checksum : checksums.entrySet()) {
+            sb.append("do_verify ")
+                    .append(checksum.getKey())
+                    .append(" ")
+                    .append(checksum.getValue())
+                    .append('\n');
         }
 
         sb.append("\n\n").append(TAIL);
