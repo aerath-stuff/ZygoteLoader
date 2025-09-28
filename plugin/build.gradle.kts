@@ -4,9 +4,7 @@ plugins {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
     withSourcesJar()
 }
 
@@ -18,7 +16,10 @@ dependencies {
 gradlePlugin {
     plugins {
         create("zygote") {
-            id = "${rootProject.group}.${rootProject.name}"
+            id = when {
+                rootProject.group.toString().isEmpty() -> rootProject.name
+                else -> "${rootProject.group}.${rootProject.name}"
+            }
             implementationClass = "com.v7878.zygisk.gradle.ZygoteLoaderPlugin"
         }
     }
@@ -58,13 +59,3 @@ val generator = tasks.register("generateDynamicSources") {
 
 tasks["compileJava"].dependsOn(generator)
 tasks["sourcesJar"].dependsOn(generator)
-
-publishing {
-    publications {
-        register<MavenPublication>("pluginMaven") {
-            artifactId = project.name
-            groupId = project.group.toString()
-            version = project.version.toString()
-        }
-    }
-}
