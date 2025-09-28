@@ -3,7 +3,7 @@ package com.v7878.zygisk;
 import java.util.Map;
 
 /**
- * Utilize to manage ZygoteLoader.
+ * Utilize to manage ZygoteLoader
  */
 public final class ZygoteLoader {
     /**
@@ -32,7 +32,17 @@ public final class ZygoteLoader {
         return EntryPoint.getProperties();
     }
 
-    // TODO: javadoc
+    /**
+     * Retrieves the module's root path
+     * <p>
+     * This path is dynamically resolved and is only valid prior to process specialization.
+     * After specialization, it becomes inaccessible due to SELinux policies
+     * <p>
+     * The path must be used immediately upon retrieval and should not be cached or stored for later use.
+     * Any attempt to access it after specialization will result in a security denial or runtime failure
+     *
+     * @return the module root path (without trailing slash), or null after specialization
+     */
     public static String getModuleDir() {
         return EntryPoint.getModuleDir();
     }

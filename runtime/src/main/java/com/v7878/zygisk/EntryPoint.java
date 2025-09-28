@@ -51,7 +51,7 @@ final class EntryPoint {
         {
             String attachNativeLibs = properties.get("attachNativeLibs");
             if (attachNativeLibs == null) {
-                Log.e(TAG, "Entrypoint not found");
+                Log.e(TAG, "attachNativeLibs flag does not exist and will be treated as false");
                 break libs;
             }
             if (Boolean.parseBoolean(attachNativeLibs)) {
