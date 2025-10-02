@@ -47,3 +47,18 @@ android {
 dependencies {
     implementation(libs.r8.annotations)
 }
+
+publishing {
+    publications {
+        afterEvaluate {
+            components.forEach { component ->
+                register<MavenPublication>(component.name) {
+                    from(component)
+                    groupId = project.group.toString()
+                    artifactId = project.name
+                    version = project.version.toString()
+                }
+            }
+        }
+    }
+}
