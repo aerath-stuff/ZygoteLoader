@@ -22,13 +22,14 @@ final class EntryPoint {
     private static final String TAG = "ZygoteLoader[Java]";
 
     private static String packageName;
+    private static String processName;
     private static String moduleDir;
     private static Map<String, String> properties;
     private static Class<?> entrypoint;
 
     @DoNotObfuscate
     @DoNotShrink
-    private static boolean load(String packageName, int moduleDirFD) {
+    private static boolean load(String packageName, String processName, int moduleDirFD) {
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "Loading in " + packageName);
         }
@@ -36,15 +37,16 @@ final class EntryPoint {
         try {
             File props = new File(moduleDir, "module.prop");
             byte[] propsData = Files.readAllBytes(props.toPath());
-            return init(packageName, new String(propsData, UTF_8));
+            return init(packageName, processName, new String(propsData, UTF_8));
         } catch (Throwable throwable) {
             Log.e(TAG, "load", throwable);
             return false;
         }
     }
 
-    private static boolean init(String packageName, String props) throws Throwable {
+    private static boolean init(String packageName, String processName, String props) throws Throwable {
         EntryPoint.packageName = packageName;
+        EntryPoint.processName = processName;
         EntryPoint.properties = Utils.toMap(props);
 
         libs:
@@ -83,8 +85,8 @@ final class EntryPoint {
     private static void preSpecialize() {
         try {
             entrypoint.getMethod("premain").invoke(null);
-        } catch (ReflectiveOperationException e) {
-            Log.e(TAG, "Invoke premain of " + entrypoint, e);
+        } catch (Throwable th) {
+            Log.e(TAG, "Invoke premain of " + entrypoint, th);
         }
         moduleDir = null;
     }
@@ -94,8 +96,8 @@ final class EntryPoint {
     private static void postSpecialize() {
         try {
             entrypoint.getMethod("main").invoke(null);
-        } catch (ReflectiveOperationException e) {
-            Log.e(TAG, "Invoke main of " + entrypoint, e);
+        } catch (Throwable th) {
+            Log.e(TAG, "Invoke main of " + entrypoint, th);
         }
     }
 
@@ -105,6 +107,10 @@ final class EntryPoint {
 
     public static String getPackageName() {
         return packageName;
+    }
+
+    public static String getProcessName() {
+        return processName;
     }
 
     public static Map<String, String> getProperties() {

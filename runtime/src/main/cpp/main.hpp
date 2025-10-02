@@ -15,7 +15,7 @@ public:
     void postServerSpecialize(const zygisk::ServerSpecializeArgs *args) override;
 
 private:
-    void tryLoadDex(int module_dir, const char *package_name);
+    void tryLoadDex(int module_dir, const char *package_name, const char *process_name);
 
     void callJavaPreSpecialize();
 

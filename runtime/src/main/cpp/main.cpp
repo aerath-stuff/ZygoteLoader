@@ -20,36 +20,42 @@ void ZygoteLoaderModule::onLoad(zygisk::Api *_api, JNIEnv *_env) {
     api->setOption(zygisk::DLCLOSE_MODULE_LIBRARY);
 }
 
-constexpr int FIRST_ISOLATED_UID = 99000;
-constexpr int LAST_ISOLATED_UID = 99999;
-constexpr int FIRST_APP_ZYGOTE_ISOLATED_UID = 90000;
-constexpr int LAST_APP_ZYGOTE_ISOLATED_UID = 98999;
-constexpr int PER_USER_RANGE = 100000;
+const char *get_package_name(const char *data_dir, const char *process_name) {
+    struct stat st; // NOLINT(*-pro-type-member-init)
+    // check data dir is accessible for current uid
+    if (stat(data_dir, &st) == -1) {
+        LOGD("skip injecting into %s - failed to stat data directory", process_name);
+        return nullptr;
+    }
+    const char *last_slash = strrchr(data_dir, '/');
+    const char *package_name;
+    if (last_slash != nullptr) {
+        package_name = last_slash + 1;
+        LOGD("Package name for global process: %s", package_name);
+    } else {
+        LOGD("Failed to parse package name from app_data_dir: %s", data_dir);
+        return nullptr;
+    }
+    return package_name;
+}
 
 void ZygoteLoaderModule::preAppSpecialize(zygisk::AppSpecializeArgs *args) {
-    char *package_name;
-    process_get_name(env, args->nice_name, &package_name);
+    RAIIPtr process_name = get_string_data(env, args->nice_name);
+    RAIIPtr data_dir = get_string_data(env, args->app_data_dir);
 
-    {
-        if (args->is_child_zygote != nullptr && *args->is_child_zygote) {
-            LOGI("skip injecting into %s because it's a child zygote", package_name);
-            return;
-        }
-        int uid = args->uid % PER_USER_RANGE;
-        if ((uid >= FIRST_ISOLATED_UID && uid <= LAST_ISOLATED_UID) ||
-            (uid >= FIRST_APP_ZYGOTE_ISOLATED_UID && uid <= LAST_APP_ZYGOTE_ISOLATED_UID)) {
-            LOGI("skip injecting into %s because it's isolated", package_name);
-            return;
-        }
+    if (process_name == nullptr || data_dir == nullptr) {
+        LOGD("skip injecting into %d because its process_name or app_data_dir is null", args->uid);
+        return;
     }
 
-    process_fix_package_name(package_name);
+    const char *package_name = get_package_name(data_dir, process_name);
+    if (!package_name) {
+        return;
+    }
 
     RAIIFD module_dir = api->getModuleDir(); // keep alive during preSpecialize
-    tryLoadDex(module_dir, package_name);
+    tryLoadDex(module_dir, package_name, process_name);
     callJavaPreSpecialize();
-
-    free(package_name);
 }
 
 void ZygoteLoaderModule::postAppSpecialize(const zygisk::AppSpecializeArgs *args) {
@@ -58,7 +64,7 @@ void ZygoteLoaderModule::postAppSpecialize(const zygisk::AppSpecializeArgs *args
 
 void ZygoteLoaderModule::preServerSpecialize(zygisk::ServerSpecializeArgs *args) {
     RAIIFD module_dir = api->getModuleDir(); // keep alive during preSpecialize
-    tryLoadDex(module_dir, PACKAGE_NAME_SYSTEM_SERVER);
+    tryLoadDex(module_dir, PACKAGE_NAME_SYSTEM_SERVER, PROCESS_NAME_SYSTEM_SERVER);
     callJavaPreSpecialize();
 }
 
@@ -77,7 +83,8 @@ bool shouldEnable(int module_dir, const char *package_name) {
            testPackage(packages_dir, ALL_PACKAGES_NAME);
 }
 
-void ZygoteLoaderModule::tryLoadDex(int module_dir, const char *package_name) {
+void ZygoteLoaderModule::tryLoadDex(
+        int module_dir, const char *package_name, const char *process_name) {
     if (!shouldEnable(module_dir, package_name)) {
         return;
     }
@@ -88,7 +95,7 @@ void ZygoteLoaderModule::tryLoadDex(int module_dir, const char *package_name) {
 
     entrypoint = (jclass) env->NewGlobalRef(
             dex_load_and_init(
-                    env, package_name, module_dir,
+                    env, package_name, process_name, module_dir,
                     dex.data, dex.length
             )
     );
@@ -96,13 +103,13 @@ void ZygoteLoaderModule::tryLoadDex(int module_dir, const char *package_name) {
 
 void ZygoteLoaderModule::callJavaPreSpecialize() {
     if (entrypoint != nullptr) {
-        dex_call_pre_specialize(env, entrypoint);
+        call_pre_specialize(env, entrypoint);
     }
 }
 
 void ZygoteLoaderModule::callJavaPostSpecialize() {
     if (entrypoint != nullptr) {
-        dex_call_post_specialize(env, entrypoint);
+        call_post_specialize(env, entrypoint);
 
         env->DeleteGlobalRef(entrypoint);
         entrypoint = nullptr;

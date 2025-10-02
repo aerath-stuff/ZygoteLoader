@@ -1,12 +1,22 @@
 #include "dex.hpp"
 #include "logger.hpp"
+#include <string.h> // NOLINT(*-deprecated-headers)
+
+char *get_string_data(JNIEnv *env, jstring value) {
+    const char *str = env->GetStringUTFChars(value, nullptr);
+    if (str == nullptr) return nullptr;
+    auto out = strdup(str);
+    env->ReleaseStringUTFChars(value, str);
+    return out;
+}
 
 #define find_class(var_name, name) jclass var_name = env->FindClass(name); fatal_assert((var_name) != nullptr)
 #define find_static_method(var_name, clazz, name, signature) jmethodID var_name = env->GetStaticMethodID(clazz, name, signature); fatal_assert((var_name) != nullptr)
 #define find_method(var_name, clazz, name, signature) jmethodID var_name = env->GetMethodID(clazz, name, signature); fatal_assert((var_name) != nullptr)
 #define new_string(var_name, text) jstring var_name = env->NewStringUTF(text); fatal_assert((var_name) != nullptr)
 
-jclass dex_load_and_init(JNIEnv *env, const char *package_name, int module_dir,
+jclass dex_load_and_init(JNIEnv *env, const char *package_name,
+                         const char *process_name, int module_dir,
                          const void *dex_block, uint32_t dex_length) {
 
     find_class(c_class_loader, "java/lang/ClassLoader");
@@ -43,21 +53,22 @@ jclass dex_load_and_init(JNIEnv *env, const char *package_name, int module_dir,
     );
     fatal_assert(c_entrypoint != nullptr);
 
-    find_static_method(m_load, c_entrypoint, "load", "(Ljava/lang/String;I)Z");
+    find_static_method(m_load, c_entrypoint, "load", "(Ljava/lang/String;Ljava/lang/String;I)Z");
     new_string(s_package_name, package_name);
+    new_string(s_process_name, process_name);
     bool success = env->CallStaticBooleanMethod(
-            c_entrypoint, m_load, s_package_name, module_dir
+            c_entrypoint, m_load, s_package_name, s_process_name, module_dir
     );
 
     return success ? c_entrypoint : nullptr;
 }
 
-void dex_call_pre_specialize(JNIEnv *env, jclass entrypoint) {
+void call_pre_specialize(JNIEnv *env, jclass entrypoint) {
     find_static_method(m_pre_specialize, entrypoint, "preSpecialize", "()V");
     env->CallStaticVoidMethod(entrypoint, m_pre_specialize);
 }
 
-void dex_call_post_specialize(JNIEnv *env, jclass entrypoint) {
+void call_post_specialize(JNIEnv *env, jclass entrypoint) {
     find_static_method(m_post_specialize, entrypoint, "postSpecialize", "()V");
     env->CallStaticVoidMethod(entrypoint, m_post_specialize);
 }

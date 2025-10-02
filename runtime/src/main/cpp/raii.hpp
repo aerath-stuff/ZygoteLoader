@@ -12,7 +12,7 @@
 template<bool allow_invalid = false>
 struct RAIIFD {
     RAIIFD(int fd) { // NOLINT(*-explicit-constructor)
-        if (!allow_invalid) fatal_assert(fd >= 0);
+        if (!allow_invalid) fatal_assert(fd != -1);
         value = fd;
     }
 
@@ -51,4 +51,20 @@ struct RAIIFile {
 
     void *data;
     uint32_t length;
+};
+
+template<typename T>
+struct RAIIPtr {
+    RAIIPtr(T *data) : data(data) { // NOLINT(*-explicit-constructor)
+    }
+
+    ~RAIIPtr() {
+        free(data);
+    }
+
+    operator T *() const { // NOLINT(*-explicit-constructor)
+        return data;
+    }
+
+    T *data;
 };

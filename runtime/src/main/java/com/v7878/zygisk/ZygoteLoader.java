@@ -24,6 +24,15 @@ public final class ZygoteLoader {
     }
 
     /**
+     * Get currently injected process name
+     *
+     * @return package name
+     */
+    public static String getProcessName() {
+        return EntryPoint.getProcessName();
+    }
+
+    /**
      * Get properties that read from module.prop
      *
      * @return map of module.prop
