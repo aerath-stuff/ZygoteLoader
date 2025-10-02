@@ -37,7 +37,8 @@ android {
     }
 
     publishing {
-        singleVariant("release") {
+        multipleVariants {
+            allVariants()
             withSourcesJar()
         }
     }
@@ -45,18 +46,4 @@ android {
 
 dependencies {
     implementation(libs.r8.annotations)
-}
-
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            groupId = project.group.toString()
-            artifactId = project.name
-            version = project.version.toString()
-
-            afterEvaluate {
-                from(components["release"])
-            }
-        }
-    }
 }
