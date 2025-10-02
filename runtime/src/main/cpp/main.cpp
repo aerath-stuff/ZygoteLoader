@@ -1,14 +1,11 @@
 #include "main.hpp"
 
 #include "logger.hpp"
-#include "process.hpp"
+#include "constants.hpp"
 #include "dex.hpp"
 #include "raii.hpp"
 
 #include <jni.h>
-
-#include <unistd.h>
-#include <fcntl.h>
 
 #include <string.h> // NOLINT(*-deprecated-headers)
 
@@ -31,7 +28,7 @@ const char *get_package_name(const char *data_dir, const char *process_name) {
     const char *package_name;
     if (last_slash != nullptr) {
         package_name = last_slash + 1;
-        LOGD("Package name for global process: %s", package_name);
+        LOGD("Package name: %s for process: %s", package_name, process_name);
     } else {
         LOGD("Failed to parse package name from app_data_dir: %s", data_dir);
         return nullptr;
@@ -43,7 +40,7 @@ void ZygoteLoaderModule::preAppSpecialize(zygisk::AppSpecializeArgs *args) {
     RAIIPtr process_name = get_string_data(env, args->nice_name);
     RAIIPtr data_dir = get_string_data(env, args->app_data_dir);
 
-    if (process_name == nullptr || data_dir == nullptr) {
+    if (!process_name || !data_dir) {
         LOGD("skip injecting into %d because its process_name or app_data_dir is null", args->uid);
         return;
     }
@@ -64,7 +61,7 @@ void ZygoteLoaderModule::postAppSpecialize(const zygisk::AppSpecializeArgs *args
 
 void ZygoteLoaderModule::preServerSpecialize(zygisk::ServerSpecializeArgs *args) {
     RAIIFD module_dir = api->getModuleDir(); // keep alive during preSpecialize
-    tryLoadDex(module_dir, PACKAGE_NAME_SYSTEM_SERVER, PROCESS_NAME_SYSTEM_SERVER);
+    tryLoadDex(module_dir, PACKAGE_SYSTEM_SERVER, PROCESS_SYSTEM_SERVER);
     callJavaPreSpecialize();
 }
 
@@ -80,7 +77,7 @@ bool shouldEnable(int module_dir, const char *package_name) {
     RAIIFD<true> packages_dir = openat(module_dir, "packages", O_PATH | O_DIRECTORY);
     if (!packages_dir.isValid()) return false;
     return testPackage(packages_dir, package_name) ^
-           testPackage(packages_dir, ALL_PACKAGES_NAME);
+           testPackage(packages_dir, ALL_PACKAGES);
 }
 
 void ZygoteLoaderModule::tryLoadDex(
