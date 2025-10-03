@@ -22,6 +22,7 @@ import java.util.Objects;
 
 public final class ZygoteLoaderDecorator {
     private static final String ID_PATTERN = "^[a-zA-Z][a-zA-Z0-9._-]+$";
+    private static final String ZYGISK_LIB_NAME = "libzygisk_loader.so";
 
     private final Project project;
 
@@ -42,41 +43,7 @@ public final class ZygoteLoaderDecorator {
 
         VariantOutput variantOutput = variant.getOutputs().stream().findAny().orElseThrow();
 
-        Map<String, String> moduleProps = new LinkedHashMap<>();
-
-        moduleProps.put("version", variantOutput.getVersionName().getOrElse(""));
-        moduleProps.put("versionCode", variantOutput.getVersionCode().getOrElse(0).toString());
-        moduleProps.put("minSdkVersion", String.valueOf(variant.getMinSdk().getApiLevel()));
-        if (variant.getMaxSdk() != null) {
-            moduleProps.put("maxSdkVersion", String.valueOf(variant.getMaxSdk()));
-        }
-
-        putProperty(moduleProps, "id", true, extension.getId());
-        if (!extension.getId().matches(ID_PATTERN)) {
-            throw new GradleException(String.format(
-                    "module id \"%s\" does not match %s", extension.getId(), ID_PATTERN));
-        }
-        putProperty(moduleProps, "name", true, extension.getName());
-        putProperty(moduleProps, "author", true, extension.getAuthor());
-        putProperty(moduleProps, "description", true, extension.getDescription());
-        putProperty(moduleProps, "entrypoint", true, extension.getEntrypoint());
-        putProperty(moduleProps, "updateJson", false, extension.getUpdateJson());
-        putProperty(moduleProps, "attachNativeLibs", false, Boolean.toString(extension.isAttachNativeLibs()));
-
-        moduleProps.putAll(extension.getAdditionalProperties());
-
         var buildDir = project.getLayout().getBuildDirectory();
-
-        var generateModuleProp = project.getTasks().register(
-                computeTaskName("generateModuleProp", variantName),
-                PropertiesTask.class, task -> {
-                    task.getDestinationFile().set(
-                            buildDir.dir("generated/properties/" + variantName)
-                                    .map(p -> p.file("module.prop"))
-                    );
-                    task.getProperties().set(moduleProps);
-                }
-        );
 
         var generateInitialPackages = project.getTasks().register(
                 computeTaskName("generateInitialPackages", variantName),
@@ -88,12 +55,59 @@ public final class ZygoteLoaderDecorator {
                 }
         );
 
-        var apk = project.getTasks().named(computeTaskName("package", variantName)).map(p ->
-                p.getOutputs().getFiles()
-                        .getAsFileTree()
-                        .filter(f -> f.isFile() && f.getName().endsWith(".apk"))
+        var apk = project.getTasks().named(computeTaskName("package", variantName))
+                .map(p -> p.getOutputs().getFiles().getAsFileTree()
+                        .matching(f -> f.include("**/*.apk"))
                         .getSingleFile()
-        ).map(project::zipTree);
+                ).map(project::zipTree);
+
+        var hasNativeLibs = apk.map(files -> files
+                .matching(f -> f.include("lib/*/*.so"))
+                .matching(f -> f.exclude("lib/*/" + ZYGISK_LIB_NAME))
+                .getFiles().stream()
+                .findAny().isPresent()
+        );
+
+        var moduleProps = hasNativeLibs.map(value -> {
+            Map<String, String> props = new LinkedHashMap<>();
+
+            props.put("version", variantOutput.getVersionName().getOrElse(""));
+            props.put("versionCode", variantOutput.getVersionCode().getOrElse(0).toString());
+            props.put("minSdkVersion", String.valueOf(variant.getMinSdk().getApiLevel()));
+            if (variant.getMaxSdk() != null) {
+                props.put("maxSdkVersion", String.valueOf(variant.getMaxSdk()));
+            }
+
+            putProperty(props, "id", true, extension.getId());
+            if (!extension.getId().matches(ID_PATTERN)) {
+                throw new GradleException(String.format(
+                        "module id \"%s\" does not match %s", extension.getId(), ID_PATTERN));
+            }
+            putProperty(props, "name", true, extension.getName());
+            putProperty(props, "author", true, extension.getAuthor());
+            putProperty(props, "description", true, extension.getDescription());
+            putProperty(props, "entrypoint", true, extension.getEntrypoint());
+            putProperty(props, "updateJson", false, extension.getUpdateJson());
+            Boolean libs = extension.getAttachNativeLibs();
+            if (libs == null) {
+                libs = value;
+            }
+            putProperty(props, "attachNativeLibs", false, Boolean.toString(libs));
+
+            props.putAll(extension.getAdditionalProperties());
+            return props;
+        });
+
+        var generateModuleProp = project.getTasks().register(
+                computeTaskName("generateModuleProp", variantName),
+                PropertiesTask.class, task -> {
+                    task.getDestinationFile().set(
+                            buildDir.dir("generated/properties/" + variantName)
+                                    .map(p -> p.file("module.prop"))
+                    );
+                    task.getProperties().set(moduleProps);
+                }
+        );
 
         var mergeMagisk = project.getTasks().register(
                 computeTaskName("mergeMagisk", variantName),
@@ -116,7 +130,7 @@ public final class ZygoteLoaderDecorator {
                             String[] parts = file.getPath().split("/");
                             String name = parts[2];
                             // zygisk library is located in special place
-                            if ("libzygisk_loader.so".equals(name)) {
+                            if (ZYGISK_LIB_NAME.equals(name)) {
                                 String abi = parts[1];
                                 file.setPath("zygisk/" + abi + ".so");
                             }

@@ -2,8 +2,8 @@ package com.v7878.zygisk.gradle;
 
 import com.android.build.api.variant.VariantExtension;
 
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -24,7 +24,7 @@ public class ZygoteLoaderExtension implements VariantExtension {
         packages.addAll(List.of(pkgs));
     }
 
-    private final Map<String, String> props = new HashMap<>();
+    private final Map<String, String> props = new LinkedHashMap<>();
 
     @Nonnull
     public Map<String, String> getAdditionalProperties() {
@@ -110,11 +110,11 @@ public class ZygoteLoaderExtension implements VariantExtension {
         this.updateJson = updateJson;
     }
 
-    public boolean isAttachNativeLibs() {
-        return attachNativeLibs != null && attachNativeLibs;
+    public Boolean getAttachNativeLibs() {
+        return attachNativeLibs;
     }
 
-    public void setAttachNativeLibs(boolean attachNativeLibs) {
+    public void setAttachNativeLibs(Boolean attachNativeLibs) {
         this.attachNativeLibs = attachNativeLibs;
     }
 
