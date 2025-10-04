@@ -1,11 +1,13 @@
 #pragma once
 
+#include "raii.hpp"
+
 #include <jni.h>
 #include <stdint.h> // NOLINT(*-deprecated-headers)
 
-jclass dex_load_and_init(JNIEnv *env, const char *package_name,
-                         const char *process_name, int module_dir,
-                         const void *dex_block, uint32_t dex_length);
+jclass dex_load_and_init(JNIEnv *env, int module_dir,
+                         const char *package_name, const char *process_name,
+                         RAIILink<RAIIFile> *files, jsize dex_count);
 
 void call_pre_specialize(JNIEnv *env, jclass entrypoint);
 

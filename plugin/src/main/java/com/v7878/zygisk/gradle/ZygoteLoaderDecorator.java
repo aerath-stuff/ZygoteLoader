@@ -120,8 +120,8 @@ public final class ZygoteLoaderDecorator {
                     // initial packages
                     task.from(generateInitialPackages, sp -> sp.into("packages"));
 
-                    // classes.dex
-                    task.from(apk, sp -> sp.include("classes.dex"));
+                    // dex files
+                    task.from(apk, sp -> sp.include("classes*.dex"));
 
                     // native libraries
                     task.from(apk, sp -> {

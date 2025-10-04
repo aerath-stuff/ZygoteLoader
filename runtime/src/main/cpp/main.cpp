@@ -37,8 +37,8 @@ const char *get_package_name(const char *data_dir, const char *process_name) {
 }
 
 void ZygoteLoaderModule::preAppSpecialize(zygisk::AppSpecializeArgs *args) {
-    RAIIPtr process_name = get_string_data(env, args->nice_name);
-    RAIIPtr data_dir = get_string_data(env, args->app_data_dir);
+    RAIIStr process_name = get_string_data(env, args->nice_name);
+    RAIIStr data_dir = get_string_data(env, args->app_data_dir);
 
     if (!process_name || !data_dir) {
         LOGD("skip injecting into %d because its process_name or app_data_dir is null", args->uid);
@@ -80,6 +80,32 @@ bool shouldEnable(int module_dir, const char *package_name) {
            testPackage(packages_dir, ALL_PACKAGES);
 }
 
+template<typename F>
+jsize open_files(int dirfd, RAIILink<RAIIFile> *files, F filter = [](auto) { return true; }) {
+    RAIILink<RAIIFile> *current = files;
+    RAIILink<RAIIFile> *prev = nullptr;
+
+    RAIIDir dir(dirfd);
+    struct dirent64 *entry;
+    jsize count = 0;
+    while ((entry = readdir64(dir)) != nullptr) {
+        if (entry->d_type == DT_REG && filter(entry->d_name)) {
+            if (prev != nullptr) {
+                current = new RAIILink<RAIIFile>();
+                prev->next = current;
+            }
+
+            fatal_assert(current != nullptr); // always true
+            current->value = new RAIIFile(dirfd, entry->d_name);
+
+            prev = current;
+            current = nullptr;
+            count++;
+        }
+    }
+    return count;
+}
+
 void ZygoteLoaderModule::tryLoadDex(
         int module_dir, const char *package_name, const char *process_name) {
     if (!shouldEnable(module_dir, package_name)) {
@@ -88,12 +114,16 @@ void ZygoteLoaderModule::tryLoadDex(
 
     LOGD("Loading in %s", package_name);
 
-    RAIIFile dex(module_dir, "classes.dex");
+    RAIILink<RAIIFile> files;
+    jsize count = open_files(module_dir, &files, [](const char *name) {
+        return strncmp(name, "classes", 7) == 0 && strstr(name, ".dex") != nullptr;
+    });
 
     entrypoint = (jclass) env->NewGlobalRef(
             dex_load_and_init(
-                    env, package_name, process_name, module_dir,
-                    dex.data, dex.length
+                    env, module_dir,
+                    package_name, process_name,
+                    &files, count
             )
     );
 }
