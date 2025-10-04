@@ -18,4 +18,4 @@ dependencyResolutionManagement {
 }
 
 include(":runtime")
-include(":gradle-plugin")
+include(":plugin")

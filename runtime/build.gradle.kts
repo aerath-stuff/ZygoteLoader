@@ -3,10 +3,13 @@ plugins {
     alias(libs.plugins.maven.publish)
 }
 
-android {
-    compileSdk = 35
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
 
+android {
     namespace = "com.v7878.zygisk"
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
@@ -20,11 +23,6 @@ android {
                 arguments("-DANDROID_STL=none")
             }
         }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
     }
 
     externalNativeBuild {
@@ -51,13 +49,14 @@ dependencies {
 
 publishing {
     publications {
-        register<MavenPublication>(project.name) {
-            artifactId = project.name
-            groupId = project.group.toString()
-            version = project.version.toString()
-
-            afterEvaluate {
-                from(components["release"])
+        afterEvaluate {
+            components.forEach { component ->
+                register<MavenPublication>(component.name) {
+                    from(component)
+                    groupId = project.group.toString()
+                    artifactId = project.name
+                    version = project.version.toString()
+                }
             }
         }
     }

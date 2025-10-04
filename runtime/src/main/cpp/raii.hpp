@@ -8,11 +8,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdint.h> // NOLINT(*-deprecated-headers)
+#include <dirent.h>
 
 template<bool allow_invalid = false>
 struct RAIIFD {
     RAIIFD(int fd) { // NOLINT(*-explicit-constructor)
-        if (!allow_invalid) fatal_assert(fd >= 0);
+        if (!allow_invalid) fatal_assert(fd != -1);
         value = fd;
     }
 
@@ -51,4 +52,54 @@ struct RAIIFile {
 
     void *data;
     uint32_t length;
+};
+
+struct RAIIDir {
+    explicit RAIIDir(int dirfd) {
+        auto tmp = fdopendir(dup(dirfd));
+        fatal_assert(tmp != nullptr);
+        value = tmp;
+    }
+
+    ~RAIIDir() {
+        closedir(value);
+    }
+
+    operator DIR *() const { // NOLINT(*-explicit-constructor)
+        return value;
+    }
+
+    DIR *value;
+};
+
+template<typename T>
+struct RAIILink {
+    explicit RAIILink() {
+        value = nullptr;
+        next = nullptr;
+    }
+
+    ~RAIILink() {
+        // Note: deleting null pointer has no effect
+        delete value;
+        delete next;
+    }
+
+    T *value;
+    RAIILink<T> *next;
+};
+
+struct RAIIStr {
+    RAIIStr(char *value) : value(value) { // NOLINT(*-explicit-constructor)
+    }
+
+    ~RAIIStr() {
+        free(value);
+    }
+
+    operator char *() const { // NOLINT(*-explicit-constructor)
+        return value;
+    }
+
+    char *value;
 };

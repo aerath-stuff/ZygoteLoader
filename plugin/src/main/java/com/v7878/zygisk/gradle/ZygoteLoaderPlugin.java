@@ -1,6 +1,5 @@
 package com.v7878.zygisk.gradle;
 
-import com.android.build.api.dsl.ApplicationExtension;
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension;
 import com.android.build.api.variant.DslExtension;
 
@@ -18,10 +17,6 @@ public class ZygoteLoaderPlugin implements Plugin<Project> {
         }
 
         target.getDependencies().add("implementation", BuildConfig.RUNTIME_DEPENDENCY);
-
-        //TODO: allow multidex modules
-        target.getExtensions().getByType(ApplicationExtension.class)
-                .getDefaultConfig().setMultiDexEnabled(false);
 
         ZygoteLoaderExtension projectExtension = target.getExtensions()
                 .create("zygisk", ZygoteLoaderExtension.class);
