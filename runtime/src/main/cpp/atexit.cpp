@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  */
 
-#include <cstdlib>
+#include <stdlib.h>
 #include <pthread.h>
 
 namespace {
