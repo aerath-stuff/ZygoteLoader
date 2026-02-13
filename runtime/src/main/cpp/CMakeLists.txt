@@ -20,7 +20,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_FLAGS}")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${LINKER_FLAGS}")
 set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${LINKER_FLAGS}")
 
-add_library(zygisk_loader SHARED main.cpp dex.cpp operators.cpp)
+add_library(zygisk_loader SHARED atexit.cpp main.cpp dex.cpp operators.cpp)
 target_link_libraries(zygisk_loader log)
 
 if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
