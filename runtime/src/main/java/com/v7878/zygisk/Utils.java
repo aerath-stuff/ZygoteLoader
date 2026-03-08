@@ -16,7 +16,7 @@ import dalvik.system.BaseDexClassLoader;
 
 class Utils {
     public static Map<String, String> toMap(String properties) {
-        var map = new HashMap<String, String>();
+        Map<String, String> map = new HashMap<>();
 
         for (String line : properties.split("\n")) {
             String[] kv = line.split("=", 2);
@@ -32,11 +32,11 @@ class Utils {
     public static String getCurrentInstructionSet() throws ReflectiveOperationException {
         @SuppressLint("DiscouragedPrivateApi")
         class Holder {
-            static final Method getCurrentInstructionSet;
+            final Method getCurrentInstructionSet;
 
-            static {
+            {
                 try {
-                    var VMRuntime = Class.forName("dalvik.system.VMRuntime");
+                    Class<?> VMRuntime = Class.forName("dalvik.system.VMRuntime");
                     getCurrentInstructionSet = VMRuntime.getDeclaredMethod("getCurrentInstructionSet");
                     getCurrentInstructionSet.setAccessible(true);
                 } catch (Throwable th) {
@@ -44,34 +44,37 @@ class Utils {
                 }
             }
         }
-        return (String) Holder.getCurrentInstructionSet.invoke(null);
+        Holder holder = new Holder();
+        return (String) holder.getCurrentInstructionSet.invoke(null);
     }
 
     public static String getNativeLibraryFolderName() throws ReflectiveOperationException {
         String isa = getCurrentInstructionSet();
-        return switch (isa) {
-            case "arm" -> "armeabi-v7a";
-            case "arm64" -> "arm64-v8a";
-            default -> isa;
-        };
+        if ("arm".equals(isa)) {
+            return "armeabi-v7a";
+        }
+        if ("arm64".equals(isa)) {
+            return "arm64-v8a";
+        }
+        return isa;
     }
 
     public static void addNativePath(BaseDexClassLoader loader, File... libPaths) throws ReflectiveOperationException {
         @SuppressLint("DiscouragedPrivateApi")
         @SuppressWarnings("JavaReflectionMemberAccess")
         class Holder {
-            static final Field pathList;
-            static final Field nativeElements;
-            static final Constructor<?> initElement;
+            final Field pathList;
+            final Field nativeElements;
+            final Constructor<?> initElement;
 
-            static {
+            {
                 try {
                     pathList = BaseDexClassLoader.class.getDeclaredField("pathList");
                     pathList.setAccessible(true);
-                    var DexPathList = Class.forName("dalvik.system.DexPathList");
+                    Class<?> DexPathList = Class.forName("dalvik.system.DexPathList");
                     nativeElements = DexPathList.getDeclaredField("nativeLibraryPathElements");
                     nativeElements.setAccessible(true);
-                    var NativeLibraryElement = Class.forName("dalvik.system.DexPathList$NativeLibraryElement");
+                    Class<?> NativeLibraryElement = Class.forName("dalvik.system.DexPathList$NativeLibraryElement");
                     initElement = NativeLibraryElement.getDeclaredConstructor(File.class);
                     initElement.setAccessible(true);
                 } catch (Throwable th) {
@@ -83,14 +86,15 @@ class Utils {
         if (libPaths.length == 0) {
             return;
         }
-        var pathList = Holder.pathList.get(loader);
-        var elements = (Object[]) Holder.nativeElements.get(pathList);
+        Holder holder = new Holder();
+        Object pathList = holder.pathList.get(loader);
+        Object[] elements = (Object[]) holder.nativeElements.get(pathList);
         //noinspection DataFlowIssue
         int oldLength = elements.length;
         elements = Arrays.copyOf(elements, oldLength + libPaths.length);
         for (int i = 0; i < libPaths.length; i++) {
-            elements[oldLength + i] = Holder.initElement.newInstance(libPaths[i]);
+            elements[oldLength + i] = holder.initElement.newInstance(libPaths[i]);
         }
-        Holder.nativeElements.set(pathList, elements);
+        holder.nativeElements.set(pathList, elements);
     }
 }

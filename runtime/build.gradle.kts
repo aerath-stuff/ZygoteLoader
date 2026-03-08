@@ -3,10 +3,6 @@ plugins {
     alias(libs.plugins.maven.publish)
 }
 
-java {
-    toolchain.languageVersion = JavaLanguageVersion.of(17)
-}
-
 android {
     namespace = "com.v7878.zygisk"
     compileSdk = 36

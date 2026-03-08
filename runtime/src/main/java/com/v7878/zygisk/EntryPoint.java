@@ -19,7 +19,7 @@ import dalvik.system.BaseDexClassLoader;
 @DoNotObfuscateType
 @DoNotShrinkType
 final class EntryPoint {
-    private static final String TAG = "ZygoteLoader[Java]";
+    private static final String TAG = "ZygoteLoader";
 
     private static String packageName;
     private static String processName;
