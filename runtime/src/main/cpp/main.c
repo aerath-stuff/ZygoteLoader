@@ -24,11 +24,11 @@ JNIEnv *java_env;
 jclass entrypoint;
 
 char *get_string_data(JNIEnv *env, jstring *value) {
-  const char *str = (*env)->GetStringUTFChars(env, value, NULL);
+  const char *str = (*env)->GetStringUTFChars(env, *value, 0);
   if (str == NULL) return NULL;
 
   char *out = strdup(str);
-  (*env)->ReleaseStringUTFChars(env, value, str);
+  (*env)->ReleaseStringUTFChars(env, *value, str);
 
   return out;
 }
