@@ -18,6 +18,4 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 #define LOGF(...) do { __android_log_print(ANDROID_LOG_FATAL, TAG, __VA_ARGS__); abort(); } while (0)
 
-#define fatal_assert(expr) if (!(expr)) LOGF("!(" #expr ")")
-
 #endif /* LOGGER_H */
