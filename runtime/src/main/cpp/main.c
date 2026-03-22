@@ -198,8 +198,9 @@ void callJavaPostSpecialize() {
 
 
 void pre_app_specialize(void *mod_data, struct AppSpecializeArgs *args) {
-  LOGD("Request dlclose module");
-  api_table->setOption(mod_data, DLCLOSE_MODULE_LIBRARY);
+  (void) mod_data;
+
+  api_table->setOption(api_table->impl, DLCLOSE_MODULE_LIBRARY);
 
   char *process_name = get_string_data(java_env, args->nice_name);
   char *data_dir = get_string_data(java_env, args->app_data_dir);
@@ -223,7 +224,7 @@ void pre_app_specialize(void *mod_data, struct AppSpecializeArgs *args) {
     return;
   }
 
-  int module_dir = api_table->getModuleDir(mod_data);
+  int module_dir = api_table->getModuleDir(api_table->impl);
   if (module_dir == -1) {
     LOGE("Failed to get module directory");
 
@@ -253,9 +254,9 @@ void pre_server_specialize(void *mod_data, struct ServerSpecializeArgs *args) {
   (void) mod_data; (void) args;
 
   LOGD("Request dlclose module");
-  api_table->setOption(mod_data, DLCLOSE_MODULE_LIBRARY);
+  api_table->setOption(api_table->impl, DLCLOSE_MODULE_LIBRARY);
 
-  int module_dir = api_table->getModuleDir(mod_data);
+  int module_dir = api_table->getModuleDir(api_table->impl);
   if (module_dir == -1) {
     LOGE("Failed to get module directory");
 
