@@ -4,11 +4,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import android.util.Log;
 
-import com.v7878.r8.annotations.DoNotObfuscate;
-import com.v7878.r8.annotations.DoNotObfuscateType;
-import com.v7878.r8.annotations.DoNotShrink;
-import com.v7878.r8.annotations.DoNotShrinkType;
-
 import java.io.File;
 import java.nio.file.Files;
 import java.util.Map;
@@ -16,10 +11,8 @@ import java.util.Map;
 import dalvik.system.BaseDexClassLoader;
 
 @SuppressWarnings("unused")
-@DoNotObfuscateType
-@DoNotShrinkType
 final class EntryPoint {
-    private static final String TAG = "ZygoteLoader[Java]";
+    private static final String TAG = "ZygoteLoader";
 
     private static String packageName;
     private static String processName;
@@ -27,12 +20,7 @@ final class EntryPoint {
     private static Map<String, String> properties;
     private static Class<?> entrypoint;
 
-    @DoNotObfuscate
-    @DoNotShrink
     private static boolean load(String packageName, String processName, int moduleDirFD) {
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Loading in " + packageName);
-        }
         moduleDir = "/proc/self/fd/" + moduleDirFD;
         try {
             File props = new File(moduleDir, "module.prop");
@@ -80,8 +68,6 @@ final class EntryPoint {
         return true;
     }
 
-    @DoNotObfuscate
-    @DoNotShrink
     private static void preSpecialize() {
         try {
             entrypoint.getMethod("premain").invoke(null);
@@ -91,8 +77,6 @@ final class EntryPoint {
         moduleDir = null;
     }
 
-    @DoNotObfuscate
-    @DoNotShrink
     private static void postSpecialize() {
         try {
             entrypoint.getMethod("main").invoke(null);
