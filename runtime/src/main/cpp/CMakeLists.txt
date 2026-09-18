@@ -4,7 +4,7 @@ project(ZygoteLoader)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(LINKER_FLAGS "-Wl,--hash-style=both")
+set(LINKER_FLAGS "-Wl,--hash-style=both -Wl,-z,max-page-size=16384")
 set(CXX_FLAGS "-Werror=format -fdata-sections -ffunction-sections -fno-exceptions -fno-rtti -fno-threadsafe-statics")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -24,6 +24,5 @@ add_library(zygisk_loader SHARED atexit.cpp main.cpp dex.cpp operators.cpp)
 target_link_libraries(zygisk_loader log)
 
 if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_custom_command(TARGET zygisk_loader POST_BUILD
-            COMMAND ${CMAKE_STRIP} --strip-all --remove-section=.comment "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libzygisk_loader.so")
+    add_custom_command(TARGET zygisk_loader POST_BUILD COMMAND ${CMAKE_STRIP} --strip-all --keep-section=.note.gnu.property --remove-section=.comment "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libzygisk_loader.so")
 endif ()
